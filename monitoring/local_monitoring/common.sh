@@ -537,7 +537,8 @@ function kruize_local_demo_setup() {
 
 #setup the operator and deploy it
 operator_setup() {
-  	clone_repos kruize-operator
+#  	clone_repos kruize-operator
+  git clone -b update_operator_namespace https://github.com/shreyabiradar07/kruize-operator/
 
 	echo "🔄 Checking for existence of kruize-operator namespace"
 
@@ -562,12 +563,18 @@ operator_setup() {
 
     echo
     echo "🔄 Deploying kruize operator image: $KRUIZE_OPERATOR_IMAGE"
+
+    if [ ${CLUSTER_TYPE} == "minikube" ] || [ ${CLUSTER_TYPE} == "kind" ]; then
+    		make deploy-minikube IMG=${KRUIZE_OPERATOR_IMAGE}
+    elif [ ${CLUSTER_TYPE} == "openshift" ]; then
+    		make deploy-openshift IMG=${KRUIZE_OPERATOR_IMAGE}
+    fi
     make deploy IMG=${KRUIZE_OPERATOR_IMAGE}
     popd  # Return to original directory
 
 	echo
 	echo "🔄 Waiting for kruize operator to be ready"
-	kubectl wait --for=condition=Available deployment/kruize-operator-controller-manager -n kruize-operator-system --timeout=300s
+	kubectl wait --for=condition=Available deployment/kruize-operator-controller-manager -n ${NAMESPACE} --timeout=300s
 
 	if [ -n "${KRUIZE_DOCKER_IMAGE}" ]; then
 		sed -i -E 's#^([[:space:]]*)autotune_image:.*#\1autotune_image: "'"${KRUIZE_DOCKER_IMAGE}"'"#' "./kruize-operator/config/samples/v1alpha1_kruize.yaml"
